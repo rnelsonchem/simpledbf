@@ -45,6 +45,8 @@ Load a DBF file
 This module currently only defines a single class, `Dbf5`, which is
 instantiated with a DBF file name (can contain path info).
 
+.. code::
+
     In : from simpledbf import Dbf5
 
     In : dbf = Dbf5('fake_file_name.dbf')
@@ -55,6 +57,8 @@ number of records in the DBF file, and `fields` is a list of tuples with
 information about the data columns. (See the DBF file spec for info on the
 column type characters. The "DeletionFlag" column is not exported, but simply
 checks if a record has been deleted.)
+
+.. code::
 
     In : dbf.numrec
     Out: 10000
@@ -73,6 +77,8 @@ of the conversion process. When this keyword argument is passed into `mem`,
 the approximate memory footprint of the chunk will also be given, which can be
 useful when trying to determine the maximum chunksize your memory will allow.
 
+.. code::
+
     In : dbf.mem()
     This total process would require more than 350.2 MB of RAM. 
 
@@ -88,6 +94,8 @@ name of a CSV file as an input. The default behavior is to append new data to
 an existing file, so be careful. If `chunksize` is passed as a keyword
 argument, the file buffer will be flushed after processing that many records.
 
+.. code::
+
     In : dbf = Dbf5('fake_file_name.dbf')
 
     In : dbf.to_csv('junk.csv')
@@ -99,6 +107,8 @@ The `to_dataframe` method returns the DBF records as a Pandas DataFrame.
 DBF file exceeds available memory, then passing the `chunksize` keyword
 argument will return a generator function. This generator yields DataFrames of
 len(<=chunksize) until all of the records have been processed.
+
+.. code::
 
     In : dbf = Dbf5('fake_file_name.dbf')
 
@@ -122,6 +132,8 @@ connection. This will be limited to the SQL databases supported by SQLalchemy,
 see the `SQLalchemy docs`_ for more info. (This has been tested with SQLite
 and Postgresql.)
 
+.. code::
+
     In : dbf = Dbf5('fake_file_name.dbf')
 
     In : dbf = dbf.to_pandassql('sqlite:///foo.db')
@@ -132,6 +144,8 @@ name as the DBF file without file extension. Again, the default here is to
 append to an existing table. If you want to start fresh, delete the existing
 table before using this function. The `chunksize` keyword processes the DBF
 file in chunks of records no larger than this size.
+
+.. code::
 
     In : dbf = Dbf5('fake_file_name.dbf')
 
@@ -152,12 +166,16 @@ name, so be careful here. The HDF file will be created using the highest level
 of compression (9) with the 'blosc' compression lib. This saves an enormous
 amount of disk space, with little degradation of performance.
 
+.. code::
+
     In : dbf = Dbf5('fake_file_name.dbf')
 
     In : dbf = dbf.to_pandashdf('fake.h5')
 
 This method uses the same optional arguments, and corresponding defaults, as
 `to_pandassql`. See above.
+
+.. code::
 
     In : dbf = Dbf5('fake_file_name.dbf')
 
