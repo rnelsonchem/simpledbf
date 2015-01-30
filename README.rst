@@ -36,6 +36,20 @@ using the optional packages.
 
 * SQLalchemy >= 0.9
 
+Installation
+------------
+
+It's probably easiest to install this package using `pip`::
+
+    $ pip install simpledbf
+
+Or from GitHub::
+
+    $ pip install git+https://github.com/rnelsonchem/simpledbf.git
+
+Although this package is only one file, so you can just download it as is in
+any folder of your choosing.
+
 Example Usage
 -------------
 
