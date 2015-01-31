@@ -1,3 +1,14 @@
+simpledbf 0.2.1 Release Notes
+#############################
+
+Highlights
+----------
+
+* Added a 'na' keyword argument that controls the value of missing/bad data.
+
+* Set the default 'na' to the empty string ('') for CSV and NaN ('nan') for
+  all others exports.
+
 simpledbf 0.2.0 Release Notes
 #############################
 

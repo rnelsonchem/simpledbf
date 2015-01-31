@@ -5,7 +5,7 @@ with open('README.rst') as file:
 
 setup(
     name = "simpledbf",
-    version = "0.2.0",
+    version = "0.2.1",
 
     description = "A simple DBF file converter for Python3",
     url = "https://github.com/rnelsonchem/simpledbf",

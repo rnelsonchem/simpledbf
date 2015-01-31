@@ -46,13 +46,16 @@ Python2 and is distributed under a PSF license.
 .. _DBF version 7: http://www.dbase.com/KnowledgeBase/int/db7_file_fmt.htm
 .. _GitHub repo: https://github.com/rnelsonchem/simpledbf
 
-Note
-----
+Note on Empty/Bad Data
+----------------------
 
-The current version of this package attempts to convert empty strings and
-poorly formatted values to NaN (i.e. `float('nan')`). Pandas has very powerful
-methods and algorithms for `working with missing data`_, including converting
-NaN to other values (e.g. empty strings).
+The current version of this package attempts to convert blank strings and
+poorly formatted values to an empty value of your choosing. This is controlled
+by the `na` keyword argument to all export functions. The default for CSV is
+an empty string (''), and for all other exports, it is 'nan' which is
+converted to `float('nan')`. Pandas has very powerful methods and algorithms
+for `working with missing data`_, including converting NaN to other values
+(e.g. empty strings). 
 
 .. _working with missing data: http://pandas.pydata.org/pandas-docs/stable/
         missing_data.html
@@ -154,13 +157,21 @@ To export the data to a CSV file, use the `to_csv` method, which takes the
 name of a CSV file as an input. The default behavior is to append new data to
 an existing file, so be careful if the file already exists. If `chunksize` is
 passed as a keyword argument, the file buffer will be flushed after processing
-that many records. (May not be necessary.)
+that many records. (May not be necessary.)  The `na` keyword changes the value
+used for missing/bad entries (default is '').
 
 .. code::
 
     In : dbf = Dbf5('fake_file_name.dbf')
 
     In : dbf.to_csv('junk.csv')
+
+If you are unhappy with the default CSV output of this
+module, Pandas also has very `powerful CSV export capabilities`_, among other
+formats.
+
+.. _powerful CSV export capabilities: http://pandas.pydata.org/pandas-docs/
+        stable/io.html#writing-to-csv-format
 
 To DataFrame 
 ++++++++++++ 
@@ -169,7 +180,9 @@ The `to_dataframe` method returns the DBF records as a Pandas DataFrame.
 Obviously, this method requires that Pandas is installed. If the size of the
 DBF file exceeds available memory, then passing the `chunksize` keyword
 argument will return a generator function. This generator yields DataFrames of
-len(<=chunksize) until all of the records have been processed.
+len(<=chunksize) until all of the records have been processed. The `na`
+keyword changes the value used for missing/bad entries (default is 'nan' which
+inserts `float('nan')`).
 
 .. code::
 
@@ -201,12 +214,14 @@ and Postgresql.)
 
     In : dbf = dbf.to_pandassql('sqlite:///foo.db')
 
-This method takes two optional arguments. `table` is the name of the table
+This method takes three optional arguments. `table` is the name of the table
 you'd like to use. If this is not passed, your new table will have the same
 name as the DBF file without file extension. Again, the default here is to
 append to an existing table. If you want to start fresh, delete the existing
 table before using this function. The `chunksize` keyword processes the DBF
-file in chunks of records no larger than this size.
+file in chunks of records no larger than this size. The `na` keyword changes
+the value used for missing/bad entries (default is 'nan' which inserts
+`float('nan')`).
 
 .. code::
 
