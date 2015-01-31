@@ -19,11 +19,6 @@ setup(
     keywords = "DBF CSV Pandas SQLalchemy PyTables SQL HDF",
 
     packages = find_packages(),
-    install_requires = [
-        'pandas>=0.15.2',
-        'tables>=3.1.1',
-        'sqlalchemy>=0.9',
-    ],
 
 )
 

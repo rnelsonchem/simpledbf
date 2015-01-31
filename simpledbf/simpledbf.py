@@ -2,8 +2,21 @@ import struct
 import datetime
 import os
 
-import pandas as pd
-import sqlalchemy as sql
+# Check for optional dependencies.
+try:
+    import pandas as pd
+except:
+    print("Pandas is not installed. No support for DataFrames, HDF, or SQL.")
+else:
+    try:
+        import tables as tb
+    except:
+        print("PyTables is not installed. No support for HDF output.")
+    try:
+        import sqlalchemy as sql
+    except:
+        print("SQLalchemy is not installed. No support for SQL output.")
+
 
 class DbfBase(object):
     '''
