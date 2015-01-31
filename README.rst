@@ -1,40 +1,79 @@
 simpledbf
 #########
 
-A Python3 compatible utility for converting `DBF version 5`_ files to CSV
-files, Pandas DataFrames, SQL tables, or HDF5 tables. This code was designed
-to be a very simple, fast and memory efficient conversion tool for legacy DBF
-files. Therefore, it lacks many features (such as a DBF file writer) that
-other packages might provide. `DBF version 7`_, the most recent
-DBF file spec, is not currently supported by this package.
+A Python3 utility for converting `DBF version 5`_ files to CSV files, Pandas
+DataFrames, SQL tables, or HDF5 tables. (There is limited Python2 support. See
+below.) This code was designed to be very simple, fast and memory efficient;
+therefore, it lacks many features (such as a DBF file writer) that other
+packages might provide. The conversion to CSV format is entirely written in
+Python, so no additional dependencies are necessary. For other formats, see
+`Requirements`_. `DBF version 7`_, the most recent DBF file spec, is not
+currently supported by this package.
 
-Bug fix and update requests can be filed at the `GitHub repo`_.
+*Python 2 Support* Except for HDF file export, this code should work fine with
+Python2. HDF files created using simpledbf in Python3 are compatible with
+Python2 HDF packages, so in principle, you could make any HDF files in a
+temporary Python3 environment. If you are using the `Anaconda Python
+distribution`_ (recommended), then you can make a small Python3 environment as
+follows::
+
+    $ conda create -n dbf python=3 pip pandas pytables sqlalchemy
+    # Lots of output...
+    
+    $ source activate dbf
+
+    dbf>$ pip install simpledbf
+
+    dbf>$ python my_py3_hdf_creation_script.py
+    # This is using Python3
+
+    dbf>$ source deactivate
+
+    $ python my_py2_stuff_with_hdf.py
+    # This is using Python2 again
+
+Bug fixes, questions, and update requests are encouraged and can be filed at
+the `GitHub repo`_. 
 
 This code is derived from an  `ActiveState DBF example`_ that works with
 Python2 and is distributed under a PSF license.
 
+.. _Anaconda Python distribution: http://continuum.io/downloads
 .. _DBF version 5: http://www.oocities.org/geoff_wass/dBASE/GaryWhite/
         dBASE/FAQ/qformt.htm
 .. _ActiveState DBF example: http://code.activestate.com/recipes/
         362715-dbf-reader-and-writer/
 .. _DBF version 7: http://www.dbase.com/KnowledgeBase/int/db7_file_fmt.htm
 .. _GitHub repo: https://github.com/rnelsonchem/simpledbf
+
+Note
+----
+
+The current version of this package attempts to convert empty strings and
+poorly formatted values to NaN (i.e. `float('nan')`). Pandas has very powerful
+methods and algorithms for `working with missing data`_, including converting
+NaN to other values (e.g. empty strings).
+
+.. _working with missing data: http://pandas.pydata.org/pandas-docs/stable/
+        missing_data.html
         
+.. _Requirements:
+
 Requirements
 ------------
 
-This module was tested with the following Python and package versions. Python
-is the only requirement if you only want to export to CSV. In that case,
-comment out the other imports in the source code (only one file) to avoid
-using the optional packages.
+This module was tested with the following package versions. Python is the only
+requirement if you only want to export to CSV. In that case, comment out the
+other imports in the source code (only one file) to avoid using the optional
+packages.
 
-* Python >= 3.4
+* Python >=3.4, >=2.7.9 (no HDF export)
 
-* Pandas >= 0.15.2
+* Pandas >= 0.15.2 (Required for DataFrame)
 
-* PyTables >= 3.1
+* PyTables >= 3.1 (with Pandas required for HDF tables)
 
-* SQLalchemy >= 0.9
+* SQLalchemy >= 0.9 (with Pandas required for SQL tables)
 
 Installation
 ------------
@@ -47,8 +86,8 @@ Or from GitHub::
 
     $ pip install git+https://github.com/rnelsonchem/simpledbf.git
 
-Although this package is only one file, so you can just download it as is in
-any folder of your choosing.
+However, this package is currently a single file, so you can just download it
+into any folder of your choosing.
 
 Example Usage
 -------------
@@ -100,13 +139,22 @@ useful when trying to determine the maximum chunksize your memory will allow.
     Each chunk will require 4.793 MB of RAM.
     This total process would require more than 350.2 MB of RAM.
 
+.. note::
+
+    For all export methods, once the dbf file has been exported, the internal
+    file object will be exhausted, so you will not be able to re-export the
+    data. This is the same behavior as a standard file object. To re-export
+    data, first recreate a new `Dbf5` instance using the same file name, which
+    is the procedure followed in the documentation below.
+    
 To CSV
 ++++++
 
 To export the data to a CSV file, use the `to_csv` method, which takes the
 name of a CSV file as an input. The default behavior is to append new data to
-an existing file, so be careful. If `chunksize` is passed as a keyword
-argument, the file buffer will be flushed after processing that many records.
+an existing file, so be careful if the file already exists. If `chunksize` is
+passed as a keyword argument, the file buffer will be flushed after processing
+that many records. (May not be necessary.)
 
 .. code::
 
@@ -114,10 +162,11 @@ argument, the file buffer will be flushed after processing that many records.
 
     In : dbf.to_csv('junk.csv')
 
-To DataFrame
+To DataFrame 
 ++++++++++++ 
+
 The `to_dataframe` method returns the DBF records as a Pandas DataFrame.
-(Obviously, this method requires that Pandas is installed.) If the size of the
+Obviously, this method requires that Pandas is installed. If the size of the
 DBF file exceeds available memory, then passing the `chunksize` keyword
 argument will return a generator function. This generator yields DataFrames of
 len(<=chunksize) until all of the records have been processed.
