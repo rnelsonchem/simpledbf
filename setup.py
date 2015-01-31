@@ -5,7 +5,7 @@ with open('README.rst') as file:
 
 setup(
     name = "simpledbf",
-    version = "0.1.0",
+    version = "0.2.0",
 
     description = "A simple DBF file converter for Python3",
     url = "https://github.com/rnelsonchem/simpledbf",
@@ -15,8 +15,18 @@ setup(
     author_email = "rnelsonchem@gmail.com",
 
     license = "BSD",
+    classifiers = [
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers', 
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+    ]
 
-    keywords = "DBF CSV Pandas SQLalchemy PyTables SQL HDF",
+    keywords = "DBF CSV Pandas SQLalchemy PyTables DataFrame SQL HDF",
 
     packages = find_packages(),
 
