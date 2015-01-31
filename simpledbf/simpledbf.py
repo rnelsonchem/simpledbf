@@ -50,6 +50,26 @@ class DbfBase(object):
             if remain != 0:
                 chunks.append(remain) 
             return chunks
+
+    def _na_set(self, na):
+        '''Set the value used for missing/bad data.
+
+        Parameters
+        ----------
+        na : various types accepted
+            The value that will be used to replace missing or malformed
+            entries. Right now this accepts pretty much anything, and that
+            value will be used as a replacement. (May not do what you expect.)
+            However, the strings 'na' or 'nan' (case insensitive) will insert
+            float('nan'), the string 'none' (case insensitive) or will insert
+            the Python object `None`.
+        '''
+        if na.lower == 'none':
+            self._na = None
+        elif na.lower in ('na', 'nan'):
+            self._na = float('nan')
+        else:
+            self._na = na
         
     def mem(self, chunksize=None):
         '''Print the memory usage for processing the DBF File.
@@ -79,7 +99,7 @@ class DbfBase(object):
         out = "This total process would require more than {:.4g} MB of RAM."
         print(out.format(memory))      
 
-    def to_csv(self, csvname, chunksize=None):
+    def to_csv(self, csvname, chunksize=None, na=''):
         '''Write DBF file contents to a CSV file.
 
         Parameters
@@ -94,7 +114,16 @@ class DbfBase(object):
             If this is set, the contents of the file buffer will be flushed
             after processing this many records. May be useful for very large
             files that exceed the available RAM.
+
+        na : various types accepted, optional
+            The value that will be used to replace missing or malformed
+            entries. Right now this accepts pretty much anything, and that
+            value will be used as a replacement. (May not do what you expect.)
+            However, the strings 'na' or 'nan' (case insensitive) will insert
+            float('nan'), the string 'none' (case insensitive) or will insert
+            the Python object `None`. Default for CSV is an empty string ('').
         '''
+        self._na_set(na)
         csv = open(csvname, 'a')
         column_line = ','.join(self.columns)
         csv.write(column_line + '\n')
@@ -120,7 +149,7 @@ class DbfBase(object):
                 count = 0
         csv.close()
 
-    def to_dataframe(self, chunksize=None):
+    def to_dataframe(self, chunksize=None, na='nan'):
         '''Return the DBF contents as a DataFrame.
 
         Parameters
@@ -128,6 +157,14 @@ class DbfBase(object):
         chunksize : int, optional
             Maximum number of records to process at any given time. If 'None'
             (defalut), process all records.
+
+        na : various types accepted, optional
+            The value that will be used to replace missing or malformed
+            entries. Right now this accepts pretty much anything, and that
+            value will be used as a replacement. (May not do what you expect.)
+            However, the strings 'na' or 'nan' (case insensitive) will insert
+            float('nan'), the string 'none' (case insensitive) or will insert
+            the Python object `None`. Default for DataFrame is NaN ('nan').
 
         Returns
         -------
@@ -142,6 +179,7 @@ class DbfBase(object):
         -----
         This method requires Pandas >= 0.15.2.
         '''
+        self._na_set(na)
         if not chunksize:
             # _get_recs is a generator, convert to list for DataFrame
             results = list(self._get_recs())
@@ -170,7 +208,7 @@ class DbfBase(object):
             del(results) 
             yield df
     
-    def to_pandassql(self, engine_str, table=None, chunksize=None):
+    def to_pandassql(self, engine_str, table=None, chunksize=None, na='nan'):
         '''Write DBF contents to an SQL database using Pandas.
 
         Parameters
@@ -190,10 +228,19 @@ class DbfBase(object):
             Maximum number of records to process at any given time. If 'None'
             (default), process all records.
 
+        na : various types accepted, optional
+            The value that will be used to replace missing or malformed
+            entries. Right now this accepts pretty much anything, and that
+            value will be used as a replacement. (May not do what you expect.)
+            However, the strings 'na' or 'nan' (case insensitive) will insert
+            float('nan'), the string 'none' (case insensitive) or will insert
+            the Python object `None`. Default for SQL table is NaN ('nan').
+
         Notes
         -----
         This method requires Pandas >= 0.15.2 and SQLalchemy >= 0.9.7.
         '''
+        self._na_set(na)
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
         engine = sql.create_engine(engine_str)
@@ -215,7 +262,7 @@ class DbfBase(object):
             for df in self.to_dataframe(chunksize=chunksize):
                 df.to_sql(table, engine, dtype=dtype, if_exists='append')
 
-    def to_pandashdf(self, h5name, table=None, chunksize=None):
+    def to_pandashdf(self, h5name, table=None, chunksize=None, na='nan'):
         '''Write DBF contents to an HDF5 file using Pandas.
 
         Parameters
@@ -236,6 +283,14 @@ class DbfBase(object):
             Maximum number of records to process at any given time. If 'None'
             (default), process all records.
 
+        na : various types accepted, optional
+            The value that will be used to replace missing or malformed
+            entries. Right now this accepts pretty much anything, and that
+            value will be used as a replacement. (May not do what you expect.)
+            However, the strings 'na' or 'nan' (case insensitive) will insert
+            float('nan'), the string 'none' (case insensitive) or will insert
+            the Python object `None`. Default for HDF table is NaN ('nan').
+
         Notes
         -----
         This method requires Pandas >= 0.15.2 and PyTables >= 3.1.1.
@@ -244,6 +299,7 @@ class DbfBase(object):
         compression library (compression level = 9). This shouldn't affect
         performance much, but it does save an enormous amount of disk space.
         '''
+        self._na_set(na)
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
         h5 = pd.HDFStore(h5name, 'a', complevel=9, complib='blosc')
@@ -363,7 +419,7 @@ class Dbf5(DbfBase):
                     value = value.decode().strip()
                     # Convert empty strings to NaN
                     if value == '':
-                        value = float('nan')
+                        value = self._na
 
                 # Numeric type. Stored as string
                 elif typ == "N":
@@ -376,7 +432,7 @@ class Dbf5(DbfBase):
                         try:
                             value = int(value)
                         except:
-                            value = float('nan')
+                            value = self._na
 
                 # Date stores as string "YYYYMMDD", convert to datetime
                 elif typ == 'D':
@@ -384,7 +440,7 @@ class Dbf5(DbfBase):
                         y, m, d = int(value[:4]), int(value[4:6]), \
                                   int(value[6:8])
                     except:
-                        value = float('nan')
+                        value = self._na
                     else:
                         value = datetime.date(y, m, d)
 
@@ -396,14 +452,14 @@ class Dbf5(DbfBase):
                         value = False
                     # '?' indicates an empty value, convert this to NaN
                     else:
-                        value = float('nan')
+                        value = self._na
 
                 # Floating points are also stored as strings.
                 elif typ == 'F':
                     try:
                         value = float(value)
                     except:
-                        value = float('nan')
+                        value = self._na
 
                 result.append(value)
             yield result
