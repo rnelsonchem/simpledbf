@@ -1,4 +1,6 @@
 *swp
 TODO*
 *pyc
-
+.pypirc
+dist/
+simpledbf.egg*
