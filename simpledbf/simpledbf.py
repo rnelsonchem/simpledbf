@@ -349,7 +349,7 @@ class Dbf5(DbfBase):
         for i in range(chunk):
             # Extract a single record
             record = struct.unpack(self.fmt, self.f.read(self.fmtsiz))
-            # If delete byte is not a space, record deleted, skip
+            # If delete byte is not a space, record was deleted so skip
             if record[0] != b' ': 
                 continue  
 
@@ -357,24 +357,37 @@ class Dbf5(DbfBase):
             for (name, typ, size), value in zip(self.fields, record):
                 if name == 'DeletionFlag':
                     continue
+
                 # String (character) types, remove excess white space
                 if typ == "C":
                     value = value.decode().strip()
+                    # Convert empty strings to NaN
+                    if value == '':
+                        value = float('nan')
+
                 # Numeric type. Stored as string
                 elif typ == "N":
-                    # Only spaces, probably missing
-                    if value.isspace():
-                        value = float('nan')
-                    # A decimal indicates a float
-                    elif b'.' in value:
+                    # A decimal should indicate a float
+                    if b'.' in value:
                         value = float(value)
-                    # No decimal, probably an integer
+                    # No decimal, probably an integer, but if that fails,
+                    # probably NaN
                     else:
-                        value = int(value)
+                        try:
+                            value = int(value)
+                        except:
+                            value = float('nan')
+
                 # Date stores as string "YYYYMMDD", convert to datetime
                 elif typ == 'D':
-                    y, m, d = int(value[:4]), int(value[4:6]), int(value[6:8])
-                    value = datetime.date(y, m, d)
+                    try:
+                        y, m, d = int(value[:4]), int(value[4:6]), \
+                                  int(value[6:8])
+                    except:
+                        value = float('nan')
+                    else:
+                        value = datetime.date(y, m, d)
+
                 # Booleans can have multiple entry values
                 elif typ == 'L':
                     if value in b'TyTt':
@@ -384,9 +397,14 @@ class Dbf5(DbfBase):
                     # '?' indicates an empty value, convert this to NaN
                     else:
                         value = float('nan')
+
                 # Floating points are also stored as strings.
                 elif typ == 'F':
-                    value = float(value)
+                    try:
+                        value = float(value)
+                    except:
+                        value = float('nan')
+
                 result.append(value)
             yield result
     
