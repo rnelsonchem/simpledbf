@@ -420,7 +420,8 @@ class Dbf5(DbfBase):
                 continue  
 
             result = []
-            for (name, typ, size), value in zip(self.fields, record):
+            for idx, value in enumerate(record):
+                name, typ, size = self.fields[idx]
                 if name == 'DeletionFlag':
                     continue
 
