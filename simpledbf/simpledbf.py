@@ -308,9 +308,21 @@ class DbfBase(object):
             df = self.to_dataframe()
             h5.append(table, df)
         else:
+            # Find the maximum string column length This is necessary because
+            # the appendable table can not change width if a new DF is added
+            # with a longer string
+            max_string_len = {}
+            mx = 0
+            for field in self.fields:
+                if field[1] == "C" and field[2] > mx:
+                    mx = field[2]
+            if mx != 0:
+                max_string_len = {'values':mx}
+
             for df in self.to_dataframe(chunksize=chunksize):
-                h5.append(table, df)
+                h5.append(table, df, min_itemsize=max_string_len)
                 h5.flush(fsync=True)
+
         h5.close()
 
 class Dbf5(DbfBase):
