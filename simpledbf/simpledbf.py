@@ -461,6 +461,10 @@ class Dbf5(DbfBase):
                     except:
                         value = self._na
 
+                else:
+                    err = 'Column type "{}" not yet supported.'
+                    raise ValueError(err.format(value))
+
                 result.append(value)
             yield result
     
