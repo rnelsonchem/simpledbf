@@ -332,12 +332,7 @@ class Dbf5(DbfBase):
 
     codec : string, optional
         The codec to use when decoding text-based records. The default is
-        'utf-8'. See Python's `codec` standard lib module for more examples.
-        Note: This setting does not affect column name decoding. The column
-        names are converted to native string types (`str`) for the Python
-        interpreter. 'ascii' for Py2: 'utf-8' for Py3. This shouldn't matter
-        for the most part because the column names can not be a different
-        encoding.
+        'utf-8'. See Python's `codec` standard lib module for other options.
 
     Attributes
     ----------
@@ -386,7 +381,7 @@ class Dbf5(DbfBase):
             name, typ, size = struct.unpack('<11sc4xB15x', self.f.read(32))
             # eliminate NUL bytes from name string  
             name = name.strip(b'\x00')        
-            fields.append((str(name), str(typ), size))
+            fields.append((name.decode(self._enc), typ.decode(self._enc), size))
         self.fields = fields
         # Get the names only for DataFrame generation, skip delete flag
         self.columns = [f[0] for f in self.fields[1:]]
