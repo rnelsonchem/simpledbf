@@ -64,9 +64,9 @@ class DbfBase(object):
             float('nan'), the string 'none' (case insensitive) or will insert
             the Python object `None`.
         '''
-        if na.lower == 'none':
+        if na.lower() == 'none':
             self._na = None
-        elif na.lower in ('na', 'nan'):
+        elif na.lower() in ('na', 'nan'):
             self._na = float('nan')
         else:
             self._na = na
