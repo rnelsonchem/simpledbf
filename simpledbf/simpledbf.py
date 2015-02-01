@@ -330,6 +330,15 @@ class Dbf5(DbfBase):
     dbf : string
         The name (with optional path) of the DBF file.
 
+    codec : string, optional
+        The codec to use when decoding text-based records. The default is
+        'utf-8'. See Python's `codec` standard lib module for more examples.
+        Note: This setting does not affect column name decoding. The column
+        names are converted to native string types (`str`) for the Python
+        interpreter. 'ascii' for Py2: 'utf-8' for Py3. This shouldn't matter
+        for the most part because the column names can not be a different
+        encoding.
+
     Attributes
     ----------
 
@@ -360,7 +369,8 @@ class Dbf5(DbfBase):
     fmtsiz : int
         The size of each record in bytes.
     '''
-    def __init__(self, dbf):
+    def __init__(self, dbf, encoding='utf-8'):
+        self._enc = encoding
         path, name = os.path.split(dbf)
         self.dbf = name
         # Reading as binary so bytes will always be returned
@@ -376,7 +386,7 @@ class Dbf5(DbfBase):
             name, typ, size = struct.unpack('<11sc4xB15x', self.f.read(32))
             # eliminate NUL bytes from name string  
             name = name.strip(b'\x00')        
-            fields.append((name.decode(), typ.decode(), size))
+            fields.append((str(name), str(typ), size))
         self.fields = fields
         # Get the names only for DataFrame generation, skip delete flag
         self.columns = [f[0] for f in self.fields[1:]]
@@ -416,10 +426,12 @@ class Dbf5(DbfBase):
 
                 # String (character) types, remove excess white space
                 if typ == "C":
-                    value = value.decode().strip()
+                    value = value.strip()
                     # Convert empty strings to NaN
-                    if value == '':
+                    if value == b'':
                         value = self._na
+                    else:
+                        value = value.decode(self._enc)
 
                 # Numeric type. Stored as string
                 elif typ == "N":
