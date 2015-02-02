@@ -376,8 +376,8 @@ class Dbf5(DbfBase):
     fmtsiz : int
         The size of each record in bytes.
     '''
-    def __init__(self, dbf, encoding='utf-8'):
-        self._enc = encoding
+    def __init__(self, dbf, codec='utf-8'):
+        self._enc = codec
         path, name = os.path.split(dbf)
         self.dbf = name
         # Reading as binary so bytes will always be returned
