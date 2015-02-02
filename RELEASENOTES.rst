@@ -5,7 +5,8 @@ Highlights
 ----------
 
 * Added an optional 'codec' keyword argument to Dbf5 __init__, which controls
-  the decoding of the values in the DBF file. Default is 'utf-8'
+  the decoding of the values in the DBF file and CSV output file. Default is
+  'utf-8'
 
 * Made a couple small algorithmic changes that improved performance.
 

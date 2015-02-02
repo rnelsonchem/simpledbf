@@ -7,7 +7,7 @@ complete `Python2 support`_ as well.) This code was designed to be very
 simple, fast and memory efficient; therefore, it lacks many features (such as
 writing DBF files) that other packages might provide. The conversion to CSV
 format is entirely written in Python, so no additional dependencies are
-necessary. For other formats, see `Requirements`_. 
+necessary. For other export formats, see `Requirements`_. 
 
 Bug fixes, questions, and update requests are encouraged and can be filed at
 the `GitHub repo`_. 
@@ -66,8 +66,8 @@ follows:
     # This is using Python2 again
 
 The HDF file export is currently broken in Python2 due to a `limitation in
-Pandas HDF export with unicode`_. It may be the more recent versions of Pandas
-have fixed this issue. 
+Pandas HDF export with unicode`_. This issue may be fixed future versions of
+Pandas. 
 
 .. _Anaconda Python distribution: http://continuum.io/downloads
 .. _limitation in Pandas HDF export with unicode: http://pandas.pydata.org/
@@ -107,6 +107,8 @@ into any folder of your choosing.
 
 Example Usage
 #############
+
+.. _Loading:
 
 Load a DBF file
 ---------------
@@ -192,7 +194,9 @@ name of a CSV file as an input. The default behavior is to append new data to
 an existing file, so be careful if the file already exists. If `chunksize` is
 passed as a keyword argument, the file buffer will be flushed after processing
 that many records. (May not be necessary.)  The `na` keyword changes the value
-used for missing/bad entries (default is '').
+used for missing/bad entries (default is ''). The encoding of the resulting
+CSV file is determined by the codec that is set when opening the DBF file, see
+`Loading`_.
 
 .. code::
 
@@ -200,9 +204,8 @@ used for missing/bad entries (default is '').
 
     In : dbf.to_csv('junk.csv')
 
-If you are unhappy with the default CSV output of this
-module, Pandas also has very `powerful CSV export capabilities`_, among other
-formats.
+If you are unhappy with the default CSV output of this module, Pandas also has
+very `powerful CSV export capabilities`_ for DataFrames.
 
 .. _powerful CSV export capabilities: http://pandas.pydata.org/pandas-docs/
         stable/io.html#writing-to-csv-format
@@ -251,11 +254,10 @@ To an SQL Table
 
 The `to_pandassql` method will transfer the DBF entries to an SQL database
 table of your choice. This method uses a combination of Pandas DataFrames and
-SQLalchemy, so both of these packages must be installed. This method requires
-an SQLalchemy engine string, which is used to initialize the database
-connection. This will be limited to the SQL databases supported by SQLalchemy,
-see the `SQLalchemy docs`_ for more info. (This has been tested with SQLite
-and Postgresql.)
+SQLalchemy, so both of these packages must be installed. A valid `SQLalchemy
+engine string`_ argument is required to connect with the database. Database
+support will be limited to those supported by SQLalchemy. (This has been
+tested with SQLite and Postgresql.)
 
 .. code::
 
@@ -279,7 +281,8 @@ the value used for missing/bad entries (default is 'nan' which inserts
     In : dbf = dbf.to_pandassql('sqlite:///foo.db', table="fake_tbl",
     ....                        chunksize=100000)
     
-.. _SQLalchemy docs: http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html
+.. _SQLalchemy engine string: http://docs.sqlalchemy.org/en/rel_0_9/core/
+        engines.html
 
 To an HDF5 Table
 ++++++++++++++++
@@ -308,8 +311,8 @@ This method uses the same optional arguments, and corresponding defaults, as
 
     In : dbf = dbf.to_pandassql('fake.h5', table="fake_tbl", chunksize=100000)
 
-See the `chunksize issue`_ for DataFrame export for a potential issue you may
-encounter with chunksize.
+See the `chunksize issue`_ for DataFrame export for information on a potential
+problem you may encounter with chunksize.
 
 Export all DBF Files to Same HDF File/Database
 ++++++++++++++++++++++++++++++++++++++++++++++
