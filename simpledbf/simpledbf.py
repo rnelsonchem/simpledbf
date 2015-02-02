@@ -1,6 +1,7 @@
 import struct
 import datetime
 import os
+import codecs
 
 # Check for optional dependencies.
 try:
@@ -64,9 +65,9 @@ class DbfBase(object):
             float('nan'), the string 'none' (case insensitive) or will insert
             the Python object `None`.
         '''
-        if na.lower == 'none':
+        if na.lower() == 'none':
             self._na = None
-        elif na.lower in ('na', 'nan'):
+        elif na.lower() in ('na', 'nan'):
             self._na = float('nan')
         else:
             self._na = na
@@ -124,7 +125,7 @@ class DbfBase(object):
             the Python object `None`. Default for CSV is an empty string ('').
         '''
         self._na_set(na)
-        csv = open(csvname, 'a')
+        csv = codecs.open(csvname, 'a', encoding=self._enc)
         column_line = ','.join(self.columns)
         csv.write(column_line + '\n')
 
@@ -138,11 +139,13 @@ class DbfBase(object):
                 outs.append('"{}"')
             elif field[1] in 'NF':
                 outs.append('{}')
-        out_line = ','.join(outs) + '\n'
+        # Make the outline unicode or it won't write out properly for UTF-8
+        out_line = u','.join(outs) + '\n'
         
         count = 0
         for result in self._get_recs():
-            csv.write(out_line.format(*result))
+            out_string = out_line.format(*result)
+            csv.write(out_string)
             count += 1
             if count == chunksize:
                 csv.flush()
@@ -308,9 +311,21 @@ class DbfBase(object):
             df = self.to_dataframe()
             h5.append(table, df)
         else:
+            # Find the maximum string column length This is necessary because
+            # the appendable table can not change width if a new DF is added
+            # with a longer string
+            max_string_len = {}
+            mx = 0
+            for field in self.fields:
+                if field[1] == "C" and field[2] > mx:
+                    mx = field[2]
+            if mx != 0:
+                max_string_len = {'values':mx}
+
             for df in self.to_dataframe(chunksize=chunksize):
-                h5.append(table, df)
+                h5.append(table, df, min_itemsize=max_string_len)
                 h5.flush(fsync=True)
+
         h5.close()
 
 class Dbf5(DbfBase):
@@ -329,6 +344,10 @@ class Dbf5(DbfBase):
 
     dbf : string
         The name (with optional path) of the DBF file.
+
+    codec : string, optional
+        The codec to use when decoding text-based records. The default is
+        'utf-8'. See Python's `codec` standard lib module for other options.
 
     Attributes
     ----------
@@ -360,7 +379,8 @@ class Dbf5(DbfBase):
     fmtsiz : int
         The size of each record in bytes.
     '''
-    def __init__(self, dbf):
+    def __init__(self, dbf, codec='utf-8'):
+        self._enc = codec
         path, name = os.path.split(dbf)
         self.dbf = name
         # Reading as binary so bytes will always be returned
@@ -376,7 +396,7 @@ class Dbf5(DbfBase):
             name, typ, size = struct.unpack('<11sc4xB15x', self.f.read(32))
             # eliminate NUL bytes from name string  
             name = name.strip(b'\x00')        
-            fields.append((name.decode(), typ.decode(), size))
+            fields.append((name.decode(self._enc), typ.decode(self._enc), size))
         self.fields = fields
         # Get the names only for DataFrame generation, skip delete flag
         self.columns = [f[0] for f in self.fields[1:]]
@@ -410,16 +430,19 @@ class Dbf5(DbfBase):
                 continue  
 
             result = []
-            for (name, typ, size), value in zip(self.fields, record):
+            for idx, value in enumerate(record):
+                name, typ, size = self.fields[idx]
                 if name == 'DeletionFlag':
                     continue
 
                 # String (character) types, remove excess white space
                 if typ == "C":
-                    value = value.decode().strip()
+                    value = value.strip()
                     # Convert empty strings to NaN
-                    if value == '':
+                    if value == b'':
                         value = self._na
+                    else:
+                        value = value.decode(self._enc)
 
                 # Numeric type. Stored as string
                 elif typ == "N":
@@ -460,6 +483,10 @@ class Dbf5(DbfBase):
                         value = float(value)
                     except:
                         value = self._na
+
+                else:
+                    err = 'Column type "{}" not yet supported.'
+                    raise ValueError(err.format(value))
 
                 result.append(value)
             yield result
