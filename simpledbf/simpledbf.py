@@ -1,6 +1,7 @@
 import struct
 import datetime
 import os
+import codecs
 
 # Check for optional dependencies.
 try:
@@ -124,7 +125,7 @@ class DbfBase(object):
             the Python object `None`. Default for CSV is an empty string ('').
         '''
         self._na_set(na)
-        csv = open(csvname, 'a')
+        csv = codecs.open(csvname, 'a', encoding=self._enc)
         column_line = ','.join(self.columns)
         csv.write(column_line + '\n')
 
@@ -138,11 +139,13 @@ class DbfBase(object):
                 outs.append('"{}"')
             elif field[1] in 'NF':
                 outs.append('{}')
-        out_line = ','.join(outs) + '\n'
+        # Make the outline unicode or it won't write out properly for UTF-8
+        out_line = u','.join(outs) + '\n'
         
         count = 0
         for result in self._get_recs():
-            csv.write(out_line.format(*result))
+            out_string = out_line.format(*result)
+            csv.write(out_string)
             count += 1
             if count == chunksize:
                 csv.flush()
