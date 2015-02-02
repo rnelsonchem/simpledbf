@@ -1,21 +1,54 @@
 simpledbf
 #########
 
-A Python3 utility for converting `DBF version 5`_ files to CSV files, Pandas
-DataFrames, SQL tables, or HDF5 tables. (There is limited Python2 support. See
-below.) This code was designed to be very simple, fast and memory efficient;
-therefore, it lacks many features (such as a DBF file writer) that other
-packages might provide. The conversion to CSV format is entirely written in
-Python, so no additional dependencies are necessary. For other formats, see
-`Requirements`_. `DBF version 7`_, the most recent DBF file spec, is not
-currently supported by this package.
+A Python3 utility for converting simple DBF files (see `Limitations`_) to CSV
+files, Pandas DataFrames, SQL tables, or HDF5 tables. (There is almost
+complete `Python2 support`_ as well.) This code was designed to be very
+simple, fast and memory efficient; therefore, it lacks many features (such as
+writing DBF files) that other packages might provide. The conversion to CSV
+format is entirely written in Python, so no additional dependencies are
+necessary. For other formats, see `Requirements`_. 
 
-*Python 2 Support* Except for HDF file export, this code should work fine with
-Python2. HDF files created using simpledbf in Python3 are compatible with
-Python2 HDF packages, so in principle, you could make any HDF files in a
-temporary Python3 environment. If you are using the `Anaconda Python
-distribution`_ (recommended), then you can make a small Python3 environment as
-follows::
+Bug fixes, questions, and update requests are encouraged and can be filed at
+the `GitHub repo`_. 
+
+This code is derived from an  `ActiveState DBF example`_ that works with
+Python2 and is distributed under a PSF license.
+
+.. _ActiveState DBF example: http://code.activestate.com/recipes/
+        362715-dbf-reader-and-writer/
+.. _GitHub repo: https://github.com/rnelsonchem/simpledbf
+
+
+.. _Limitations:
+
+DBF File Limitations
+--------------------
+
+This package currently supports a subset of `dBase III through 5`_ DBF files.
+In particular, support is missing for linked memo files (DBT files). This is
+mostly due to a limitation in of the types of files available to the author.
+Feel free to request an update if you can supply a DBF file with an associated
+DBT file. `DBF version 7`_, the most recent DBF file spec, is not currently
+supported by this package.
+
+.. _dBase III through 5: http://ulisse.elettra.trieste.it/services/doc/
+        dbase/DBFstruct.htm
+.. _DBF version 7: http://www.dbase.com/KnowledgeBase/int/db7_file_fmt.htm
+
+.. _Python2 support:
+
+Python 2 Support 
+----------------
+
+Except for HDF file export, this code should work fine with Python2. HDF files
+created using simpledbf in Python3 are compatible with all Python2 HDF
+packages, so in principle, you could make any HDF files in a temporary Python3
+environment. If you are using the `Anaconda Python distribution`_
+(recommended), then you can make a small Python3 working environment as
+follows:
+
+.. code::
 
     $ conda create -n dbf python=3 pip pandas pytables sqlalchemy
     # Lots of output...
@@ -32,34 +65,14 @@ follows::
     $ python my_py2_stuff_with_hdf.py
     # This is using Python2 again
 
-Bug fixes, questions, and update requests are encouraged and can be filed at
-the `GitHub repo`_. 
-
-This code is derived from an  `ActiveState DBF example`_ that works with
-Python2 and is distributed under a PSF license.
+The HDF file export is currently broken in Python2 due to a `limitation in
+Pandas HDF export with unicode`_. It may be the more recent versions of Pandas
+have fixed this issue. 
 
 .. _Anaconda Python distribution: http://continuum.io/downloads
-.. _DBF version 5: http://www.oocities.org/geoff_wass/dBASE/GaryWhite/
-        dBASE/FAQ/qformt.htm
-.. _ActiveState DBF example: http://code.activestate.com/recipes/
-        362715-dbf-reader-and-writer/
-.. _DBF version 7: http://www.dbase.com/KnowledgeBase/int/db7_file_fmt.htm
-.. _GitHub repo: https://github.com/rnelsonchem/simpledbf
+.. _limitation in Pandas HDF export with unicode: http://pandas.pydata.org/
+        pandas-docs/stable/io.html#datatypes
 
-Note on Empty/Bad Data
-----------------------
-
-The current version of this package attempts to convert blank strings and
-poorly formatted values to an empty value of your choosing. This is controlled
-by the `na` keyword argument to all export functions. The default for CSV is
-an empty string (''), and for all other exports, it is 'nan' which is
-converted to `float('nan')`. Pandas has very powerful methods and algorithms
-for `working with missing data`_, including converting NaN to other values
-(e.g. empty strings). 
-
-.. _working with missing data: http://pandas.pydata.org/pandas-docs/stable/
-        missing_data.html
-        
 .. _Requirements:
 
 Requirements
@@ -93,19 +106,22 @@ However, this package is currently a single file, so you can just download it
 into any folder of your choosing.
 
 Example Usage
--------------
+#############
 
 Load a DBF file
-+++++++++++++++
+---------------
 
 This module currently only defines a single class, `Dbf5`, which is
-instantiated with a DBF file name (can contain path info).
+instantiated with a DBF file name (can contain path info). An optional 'codec'
+keyword argument that controls the codec for reading/writing files. The
+default is 'utf-8'. See the documentation for Python's `codec standard library
+module`_ for more codec options.
 
 .. code::
 
     In : from simpledbf import Dbf5
 
-    In : dbf = Dbf5('fake_file_name.dbf')
+    In : dbf = Dbf5('fake_file_name.dbf', codec='utf-8')
 
 The `Dbf5` object will initially only read the header information from the
 file, so you can inspect some of the properties. For example, `numrec` is the
@@ -126,12 +142,13 @@ The docstring for this object contains a complete listing of attributes and
 their descriptions.
 
 The `mem` method gives an approximate memory requirement for processing this
-DBF file. (~2x the total file size.) In addition, all of the output methods in
-this object take a `chunksize` keyword argument, which lets you split up the
-processing of large files into smaller chunks, to limit the total memory usage
-of the conversion process. When this keyword argument is passed into `mem`,
-the approximate memory footprint of the chunk will also be given, which can be
-useful when trying to determine the maximum chunksize your memory will allow.
+DBF file. (~2x the total file size, which could be wildly inaccurate.) In
+addition, all of the output methods in this object take a `chunksize` keyword
+argument, which lets you split up the processing of large files into smaller
+chunks to limit the total memory usage of the conversion process. When this
+keyword argument is passed into `mem`, the approximate memory footprint of the
+chunk will also be given, which can be useful when trying to determine the
+maximum chunksize your memory will allow.
 
 .. code::
 
@@ -142,14 +159,31 @@ useful when trying to determine the maximum chunksize your memory will allow.
     Each chunk will require 4.793 MB of RAM.
     This total process would require more than 350.2 MB of RAM.
 
-.. note::
+.. _codec standard library module: https://docs.python.org/3.4/library/
+        codecs.html 
 
-    For all export methods, once the dbf file has been exported, the internal
-    file object will be exhausted, so you will not be able to re-export the
-    data. This is the same behavior as a standard file object. To re-export
-    data, first recreate a new `Dbf5` instance using the same file name, which
-    is the procedure followed in the documentation below.
+Export the Data
+---------------
+
+For all export methods, once the dbf file has been exported, the internal
+file object will be exhausted, so you will not be able to re-export the
+data. This is the same behavior as a standard file object. To re-export
+data, first recreate a new `Dbf5` instance using the same file name, which
+is the procedure followed in the documentation below.
     
+Note on Empty/Bad Data
+++++++++++++++++++++++
+
+This package attempts to convert blank strings and poorly formatted values to
+an empty value of your choosing. This is controlled by the `na` keyword
+argument to all export functions. The default for CSV is an empty string (''),
+and for all other exports, it is 'nan' which is converted to `float('nan')`.
+Pandas has very powerful methods and algorithms for `working with missing
+data`_, including converting NaN to other values (e.g. empty strings). 
+
+.. _working with missing data: http://pandas.pydata.org/pandas-docs/stable/
+        missing_data.html
+        
 To CSV
 ++++++
 
@@ -196,6 +230,21 @@ inserts `float('nan')`).
     In : for df in dbf.to_dataframe(chunksize=10000)
     ....     do_cool_stuff(df)
     # Here a generator is returned
+
+.. _chunksize issue:
+
+Issue with DataFrame Chunksize
+++++++++++++++++++++++++++++++
+
+When a DataFrame is constructed, it attempts to determine the dtype of each
+column. If you chunk the DataFrame output, it turns out that the dtype for a
+column can change. For example, if one chunk has a column with all strings,
+the dtype will be `np.object`; however, if that column is full of
+`float('nan'` in the next chunk, then the dtype will be `float`. This has some
+consequences for writing to SQL and HDF tables as well. In principle, this
+could be changed, but it is currently non-trivial to set the dtypes for
+DataFrame columns on construction. Please file a PR through GitHub if this is
+a big problem.
 
 To an SQL Table
 +++++++++++++++
@@ -258,5 +307,31 @@ This method uses the same optional arguments, and corresponding defaults, as
     In : dbf = Dbf5('fake_file_name.dbf')
 
     In : dbf = dbf.to_pandassql('fake.h5', table="fake_tbl", chunksize=100000)
+
+See the `chunksize issue`_ for DataFrame export for a potential issue you may
+encounter with chunksize.
+
+Export all DBF Files to Same HDF File/Database
+++++++++++++++++++++++++++++++++++++++++++++++
+
+Because both HDF and SQL export use the original file name as the stored table
+name, it is trivial to process a group of files into a single database or HDF
+file. Below is an example for HDF export.
+
+.. code:: 
+
+    In : import os
+
+    In : from simpledbf import Dbf5
+
+    In : files = os.listdir('.')
+
+    In : for f in files:
+    ....     if f[-3:].lower() == 'dbf':
+    ....         dbf = Dbf5(f)
+    ....         dbf.to_pandashdf('all_data.h5')
+
+
+   
 
 

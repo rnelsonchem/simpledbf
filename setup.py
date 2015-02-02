@@ -5,9 +5,10 @@ with open('README.rst') as file:
 
 setup(
     name = "simpledbf",
-    version = "0.2.1",
+    version = "0.2.2",
 
-    description = "A simple DBF file converter for Python3",
+    description = "Convert DBF files to CSV, DataFrames, HDF5 tables, and "\
+            "SQL tables. Python3 compatible.",
     url = "https://github.com/rnelsonchem/simpledbf",
     long_description = long_description,
 

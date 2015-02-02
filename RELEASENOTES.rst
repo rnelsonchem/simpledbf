@@ -1,3 +1,24 @@
+simpledbf 0.2.2 Release Notes
+#############################
+
+Highlights
+----------
+
+* Added an optional 'codec' keyword argument to Dbf5 __init__, which controls
+  the decoding of the values in the DBF file. Default is 'utf-8'
+
+* Made a couple small algorithmic changes that improved performance.
+
+Bug Fixes
+---------
+
+* The 'na' flag now works properly. (In previous versions, it was always
+  setting empty values to the string 'nan').
+
+* Properly set the string column width for HDF chunksize-only output. (The
+  column width is set to max(string len) by default, which may not be the
+  largest for every chunk. Used the dbf header info to fix this.)
+
 simpledbf 0.2.1 Release Notes
 #############################
 
