@@ -21,11 +21,11 @@ else:
 sqltypes = {
         'sqlite': {'str':'TEXT', 'float':'REAL', 'int': 'INTEGER', 
             'date':'TEXT', 'bool':'INTEGER', 
-            'end': '.mode csv {table}\n.import {csvname} {table}'
+            'end': '.mode csv {table}\n.import {csvname} {table}',
             },
         'postgres': {'str': 'text', 'float': 'double precision', 
             'int':'bigint', 'date':'date', 'bool':'boolean',
-            'end': "\copy {table} from '{csvname}' delimiter ',' csv"
+            'end': "\copy {table} from '{csvname}' delimiter ',' csv",
             },
         }
 
@@ -167,7 +167,7 @@ class DbfBase(object):
         csv.close()
 
     def to_textsql(self, sqlname, csvname, sqltype='sqlite', table=None,
-            chunksize=None, na='', header=False):
+            chunksize=None, na='', header=False, escapequote=None):
         '''Write a SQL input file along with a CSV File.
 
         This function generates a header-less CSV file along with an SQL input
@@ -203,6 +203,7 @@ class DbfBase(object):
             engines try to process a header line as data, which can be a
             problem.
         '''
+        self._esc = escapequote
         # Create table name if not given
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
@@ -470,6 +471,8 @@ class Dbf5(DbfBase):
         self._enc = codec
         path, name = os.path.split(dbf)
         self.dbf = name
+        # Escape quotes, set by indiviual runners
+        self._esc = None
         # Reading as binary so bytes will always be returned
         self.f = open(dbf, 'rb')
 
@@ -534,6 +537,9 @@ class Dbf5(DbfBase):
                         value = self._na
                     else:
                         value = value.decode(self._enc)
+                        # Escape quoted characters
+                        if self._esc:
+                            value = value.replace('"', self._esc + '"')
 
                 # Numeric type. Stored as string
                 elif typ == "N":
