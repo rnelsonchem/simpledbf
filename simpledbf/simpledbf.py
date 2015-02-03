@@ -428,7 +428,9 @@ class Dbf5(DbfBase):
             # If delete byte is not a space, record was deleted so skip
             if record[0] != b' ': 
                 continue  
-
+            
+            # Save the column types for later
+            self._dtypes = {}
             result = []
             for idx, value in enumerate(record):
                 name, typ, size = self.fields[idx]
@@ -437,6 +439,8 @@ class Dbf5(DbfBase):
 
                 # String (character) types, remove excess white space
                 if typ == "C":
+                    if name not in self._dtypes:
+                        self._dtypes[name] = "str"
                     value = value.strip()
                     # Convert empty strings to NaN
                     if value == b'':
@@ -448,12 +452,16 @@ class Dbf5(DbfBase):
                 elif typ == "N":
                     # A decimal should indicate a float
                     if b'.' in value:
+                        if name not in self._dtypes:
+                            self._dtypes[name] = "float"
                         value = float(value)
                     # No decimal, probably an integer, but if that fails,
                     # probably NaN
                     else:
                         try:
                             value = int(value)
+                            if name not in self._dtypes:
+                                self._dtypes[name] = "int"
                         except:
                             value = self._na
 
@@ -462,6 +470,8 @@ class Dbf5(DbfBase):
                     try:
                         y, m, d = int(value[:4]), int(value[4:6]), \
                                   int(value[6:8])
+                        if name not in self._dtypes:
+                            self._dtypes[name] = "date"
                     except:
                         value = self._na
                     else:
@@ -469,6 +479,8 @@ class Dbf5(DbfBase):
 
                 # Booleans can have multiple entry values
                 elif typ == 'L':
+                    if name not in self._dtypes:
+                        self._dtypes[name] = "bool"
                     if value in b'TyTt':
                         value = True
                     elif value in b'NnFf':
@@ -479,6 +491,8 @@ class Dbf5(DbfBase):
 
                 # Floating points are also stored as strings.
                 elif typ == 'F':
+                    if name not in self._dtypes:
+                        self._dtypes[name] = "float"
                     try:
                         value = float(value)
                     except:
