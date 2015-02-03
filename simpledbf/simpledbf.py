@@ -18,6 +18,18 @@ else:
     except:
         print("SQLalchemy is not installed. No support for SQL output.")
 
+sqltypes = {
+        'sqlite': {'str':'TEXT', 'float':'REAL', 'int': 'INTEGER', 
+            'date':'TEXT', 'bool':'INTEGER', 
+            'end': '.mode csv {table}\n.import {csvname} {table}',
+            'start': 'CREATE TABLE {} (\n',
+            },
+        'postgres': {'str': 'text', 'float': 'double precision', 
+            'int':'bigint', 'date':'date', 'bool':'boolean',
+            'end': '''\copy "{table}" from '{csvname}' delimiter ',' csv''',
+            'start': 'CREATE TABLE "{}" (\n',
+            },
+        }
 
 class DbfBase(object):
     '''
@@ -63,7 +75,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`.
+            the Python object `None`.  Float/int columns are always
+            float('nan') regardless of this setting.
         '''
         if na.lower() == 'none':
             self._na = None
@@ -100,7 +113,7 @@ class DbfBase(object):
         out = "This total process would require more than {:.4g} MB of RAM."
         print(out.format(memory))      
 
-    def to_csv(self, csvname, chunksize=None, na=''):
+    def to_csv(self, csvname, chunksize=None, na='', header=True):
         '''Write DBF file contents to a CSV file.
 
         Parameters
@@ -122,12 +135,17 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for CSV is an empty string ('').
+            the Python object `None`. Default for CSV is an empty string ('');
+            however, float/int columns are always float('nan').
+
+        header : boolean, optional
+            Write out a header line with the column names. Default is True. 
         '''
         self._na_set(na)
         csv = codecs.open(csvname, 'a', encoding=self._enc)
-        column_line = ','.join(self.columns)
-        csv.write(column_line + '\n')
+        if header:
+            column_line = ','.join(self.columns)
+            csv.write(column_line + '\n')
 
         # Build up a formatting string for output. 
         outs = []
@@ -152,6 +170,94 @@ class DbfBase(object):
                 count = 0
         csv.close()
 
+    def to_textsql(self, sqlname, csvname, sqltype='sqlite', table=None,
+            chunksize=None, na='', header=False, escapequote='"'):
+        '''Write a SQL input file along with a CSV File.
+
+        This function generates a header-less CSV file along with an SQL input
+        file. The SQL file creates the database table and imports the CSV
+        data. This works sqlite and postgresql.
+
+        Parameters
+        ----------
+        sqlname : str
+            Name of the SQL text file that will be created.
+
+        csvname : str
+            Name of the CSV file to be generated. See `to_csv`.
+
+        sqltype : str, optional
+            SQL dialect to use for SQL file. Default is 'sqlite'. Also accepts
+            'postgres' for Postgresql.
+
+        table : str or None, optional
+            Table name to generate. If None (default), the table name will be
+            the name of the DBF input file without the file extension.
+            Otherwise, the given string will be used.
+        
+        chunksize : int, option
+            Number of chunks to process CSV creation. Defalut is None. See
+            `to_csv`.
+
+        na : various types accepted, optional
+            Type to use for missing values. Default is ''. See `to_csv`.
+
+        header : bool, optional
+            Write header to the CSV output file. Default is False. Some SQL
+            engines try to process a header line as data, which can be a
+            problem.
+
+        escapequote : str, optional
+            Use this character to escape quotes (") in string columns. The
+            default is `'"'`. For sqlite and postgresql, a double quote
+            character in a text string is treated as a single quote. I.e. '""'
+            is converted to '"'.
+        '''
+        self._esc = escapequote
+        # Get a dictionary of type conversions for a particular sql dialect
+        sqldict = sqltypes[sqltype]
+        # Create table name if not given
+        if not table:
+            table = self.dbf[:-4] # strip trailing ".dbf"
+        # Write the csv file
+        self.to_csv(csvname, chunksize=chunksize, na=na, header=header)
+
+        # Write the header for the table creation.
+        sql = codecs.open(sqlname, 'w', encoding=self._enc)
+        head = sqldict['start']
+        sql.write(head.format(table))
+
+        # Make an output string and container for all strings.
+        out_str = '"{}" {}'
+        outs = []
+        for field in self.fields:
+            name, typ, size = field
+            # Skip the first field
+            if name == "DeletionFlag": continue
+            # Convert Python type to SQL type
+            if name in self._dtypes:
+                dtype = self._dtypes[name]
+                outtype = sqldict[dtype]
+            else: 
+                # If the column does not have a type, probably all missing
+                # Try out best to make it the correct type for self._na
+                if typ == 'C':
+                    outtype = sqldict['str']
+                elif typ in 'NF':
+                    outtype = sqldict['float']
+                elif typ == 'L':
+                    outtype = sqldict['bool']
+                elif typ == 'D':
+                    outtype = sqldict['date']
+            outs.append(out_str.format(name, outtype))
+
+        # Write the column information
+        sql.write(',\n'.join(outs))
+        sql.write(');\n')
+        # Write the dialect-specific table generation command
+        sql.write(sqldict['end'].format(table=table, csvname=csvname))
+        sql.close()
+
     def to_dataframe(self, chunksize=None, na='nan'):
         '''Return the DBF contents as a DataFrame.
 
@@ -167,7 +273,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for DataFrame is NaN ('nan').
+            the Python object `None`. Default for DataFrame is NaN ('nan');
+            however, float/int columns are always float('nan')
 
         Returns
         -------
@@ -237,7 +344,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for SQL table is NaN ('nan').
+            the Python object `None`. Default for SQL table is NaN ('nan');
+            however, float/int columns are always float('nan').
 
         Notes
         -----
@@ -292,7 +400,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for HDF table is NaN ('nan').
+            the Python object `None`. Default for HDF table is NaN ('nan');
+            however, float/int columns are always float('nan').
 
         Notes
         -----
@@ -383,6 +492,8 @@ class Dbf5(DbfBase):
         self._enc = codec
         path, name = os.path.split(dbf)
         self.dbf = name
+        # Escape quotes, set by indiviual runners
+        self._esc = None
         # Reading as binary so bytes will always be returned
         self.f = open(dbf, 'rb')
 
@@ -428,7 +539,9 @@ class Dbf5(DbfBase):
             # If delete byte is not a space, record was deleted so skip
             if record[0] != b' ': 
                 continue  
-
+            
+            # Save the column types for later
+            self._dtypes = {}
             result = []
             for idx, value in enumerate(record):
                 name, typ, size = self.fields[idx]
@@ -437,31 +550,44 @@ class Dbf5(DbfBase):
 
                 # String (character) types, remove excess white space
                 if typ == "C":
+                    if name not in self._dtypes:
+                        self._dtypes[name] = "str"
                     value = value.strip()
                     # Convert empty strings to NaN
                     if value == b'':
                         value = self._na
                     else:
                         value = value.decode(self._enc)
+                        # Escape quoted characters
+                        if self._esc:
+                            value = value.replace('"', self._esc + '"')
 
                 # Numeric type. Stored as string
                 elif typ == "N":
                     # A decimal should indicate a float
                     if b'.' in value:
+                        if name not in self._dtypes:
+                            self._dtypes[name] = "float"
                         value = float(value)
                     # No decimal, probably an integer, but if that fails,
                     # probably NaN
                     else:
                         try:
                             value = int(value)
+                            if name not in self._dtypes:
+                                self._dtypes[name] = "int"
                         except:
-                            value = self._na
+                            # I changed this for SQL->Pandas conversion
+                            # Otherwise floats were not showing up correctly
+                            value = float('nan')
 
                 # Date stores as string "YYYYMMDD", convert to datetime
                 elif typ == 'D':
                     try:
                         y, m, d = int(value[:4]), int(value[4:6]), \
                                   int(value[6:8])
+                        if name not in self._dtypes:
+                            self._dtypes[name] = "date"
                     except:
                         value = self._na
                     else:
@@ -469,6 +595,8 @@ class Dbf5(DbfBase):
 
                 # Booleans can have multiple entry values
                 elif typ == 'L':
+                    if name not in self._dtypes:
+                        self._dtypes[name] = "bool"
                     if value in b'TyTt':
                         value = True
                     elif value in b'NnFf':
@@ -479,10 +607,12 @@ class Dbf5(DbfBase):
 
                 # Floating points are also stored as strings.
                 elif typ == 'F':
+                    if name not in self._dtypes:
+                        self._dtypes[name] = "float"
                     try:
                         value = float(value)
                     except:
-                        value = self._na
+                        value = float('nan')
 
                 else:
                     err = 'Column type "{}" not yet supported.'
