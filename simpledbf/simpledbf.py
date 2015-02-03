@@ -75,7 +75,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`.
+            the Python object `None`.  Float/int columns are always
+            float('nan') regardless of this setting.
         '''
         if na.lower() == 'none':
             self._na = None
@@ -134,7 +135,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for CSV is an empty string ('').
+            the Python object `None`. Default for CSV is an empty string ('');
+            however, float/int columns are always float('nan').
 
         header : boolean, optional
             Write out a header line with the column names. Default is True. 
@@ -271,7 +273,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for DataFrame is NaN ('nan').
+            the Python object `None`. Default for DataFrame is NaN ('nan');
+            however, float/int columns are always float('nan')
 
         Returns
         -------
@@ -341,7 +344,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for SQL table is NaN ('nan').
+            the Python object `None`. Default for SQL table is NaN ('nan');
+            however, float/int columns are always float('nan').
 
         Notes
         -----
@@ -396,7 +400,8 @@ class DbfBase(object):
             value will be used as a replacement. (May not do what you expect.)
             However, the strings 'na' or 'nan' (case insensitive) will insert
             float('nan'), the string 'none' (case insensitive) or will insert
-            the Python object `None`. Default for HDF table is NaN ('nan').
+            the Python object `None`. Default for HDF table is NaN ('nan');
+            however, float/int columns are always float('nan').
 
         Notes
         -----
