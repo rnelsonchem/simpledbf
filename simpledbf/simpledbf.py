@@ -22,10 +22,12 @@ sqltypes = {
         'sqlite': {'str':'TEXT', 'float':'REAL', 'int': 'INTEGER', 
             'date':'TEXT', 'bool':'INTEGER', 
             'end': '.mode csv {table}\n.import {csvname} {table}',
+            'start': 'CREATE TABLE {} (\n',
             },
         'postgres': {'str': 'text', 'float': 'double precision', 
             'int':'bigint', 'date':'date', 'bool':'boolean',
-            'end': "\copy {table} from '{csvname}' delimiter ',' csv",
+            'end': '''\copy "{table}" from '{csvname}' delimiter ',' csv''',
+            'start': 'CREATE TABLE "{}" (\n',
             },
         }
 
@@ -167,7 +169,7 @@ class DbfBase(object):
         csv.close()
 
     def to_textsql(self, sqlname, csvname, sqltype='sqlite', table=None,
-            chunksize=None, na='', header=False, escapequote=None):
+            chunksize=None, na='', header=False, escapequote='"'):
         '''Write a SQL input file along with a CSV File.
 
         This function generates a header-less CSV file along with an SQL input
@@ -202,8 +204,16 @@ class DbfBase(object):
             Write header to the CSV output file. Default is False. Some SQL
             engines try to process a header line as data, which can be a
             problem.
+
+        escapequote : str, optional
+            Use this character to escape quotes (") in string columns. The
+            default is `'"'`. For sqlite and postgresql, a double quote
+            character in a text string is treated as a single quote. I.e. '""'
+            is converted to '"'.
         '''
         self._esc = escapequote
+        # Get a dictionary of type conversions for a particular sql dialect
+        sqldict = sqltypes[sqltype]
         # Create table name if not given
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
@@ -212,12 +222,11 @@ class DbfBase(object):
 
         # Write the header for the table creation.
         sql = codecs.open(sqlname, 'w', encoding=self._enc)
-        sql.write("CREATE TABLE {} (\n".format(table))
+        head = sqldict['start']
+        sql.write(head.format(table))
 
-        # Get a dictionary of type conversions for a particular sql dialect
-        sqldict = sqltypes[sqltype]
         # Make an output string and container for all strings.
-        out_str = "{} {}"
+        out_str = '"{}" {}'
         outs = []
         for field in self.fields:
             name, typ, size = field
@@ -228,9 +237,16 @@ class DbfBase(object):
                 dtype = self._dtypes[name]
                 outtype = sqldict[dtype]
             else: 
-                # If the column does not have a type, this will be a problem.
-                # Need to fix this at some point.
-                outtype = 'Missing'
+                # If the column does not have a type, probably all missing
+                # Try out best to make it the correct type for self._na
+                if typ == 'C':
+                    outtype = sqldict['str']
+                elif typ in 'NF':
+                    outtype = sqldict['float']
+                elif typ == 'L':
+                    outtype = sqldict['bool']
+                elif typ == 'D':
+                    outtype = sqldict['date']
             outs.append(out_str.format(name, outtype))
 
         # Write the column information
@@ -556,7 +572,9 @@ class Dbf5(DbfBase):
                             if name not in self._dtypes:
                                 self._dtypes[name] = "int"
                         except:
-                            value = self._na
+                            # I changed this for SQL->Pandas conversion
+                            # Otherwise floats were not showing up correctly
+                            value = float('nan')
 
                 # Date stores as string "YYYYMMDD", convert to datetime
                 elif typ == 'D':
@@ -589,7 +607,7 @@ class Dbf5(DbfBase):
                     try:
                         value = float(value)
                     except:
-                        value = self._na
+                        value = float('nan')
 
                 else:
                     err = 'Column type "{}" not yet supported.'
