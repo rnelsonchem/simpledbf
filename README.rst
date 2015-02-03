@@ -6,7 +6,7 @@ files, Pandas DataFrames, SQL tables, or HDF5 tables. (There is almost
 complete `Python2 support`_ as well.) This code was designed to be very
 simple, fast and memory efficient; therefore, it lacks many features (such as
 writing DBF files) that other packages might provide. The conversion to CSV
-format is entirely written in Python, so no additional dependencies are
+and SQL is entirely written in Python, so no additional dependencies are
 necessary. For other export formats, see `Requirements`_. 
 
 Bug fixes, questions, and update requests are encouraged and can be filed at
@@ -89,7 +89,7 @@ packages.
 
 * PyTables >= 3.1 (with Pandas required for HDF tables)
 
-* SQLalchemy >= 0.9 (with Pandas required for SQL tables)
+* SQLalchemy >= 0.9 (with Pandas required for DataFrame-SQL tables)
 
 Installation
 ------------
@@ -177,11 +177,13 @@ Note on Empty/Bad Data
 ++++++++++++++++++++++
 
 This package attempts to convert blank strings and poorly formatted values to
-an empty value of your choosing. This is controlled by the ``na`` keyword
-argument to all export functions. The default for CSV is an empty string (''),
-and for all other exports, it is 'nan' which is converted to ``float('nan')``.
+an empty value of your choosing (almost, see below). This is controlled by the
+``na`` keyword argument to all export functions. The default for CSV is an
+empty string (''), and for all other exports, it is 'nan' which is converted
+to ``float('nan')``. *NOTE* The exception here is that float/int columns always use
+``float('nan')`` for all missing values for DBF->SQL->DF conversion purposes.
 Pandas has very powerful methods and algorithms for `working with missing
-data`_, including converting NaN to other values (e.g. empty strings). 
+data`_, including converting NaN to other values (e.g.  empty strings). 
 
 .. _working with missing data: http://pandas.pydata.org/pandas-docs/stable/
         missing_data.html
@@ -194,9 +196,10 @@ name of a CSV file as an input. The default behavior is to append new data to
 an existing file, so be careful if the file already exists. If ``chunksize``
 is passed as a keyword argument, the file buffer will be flushed after
 processing that many records. (May not be necessary.)  The ``na`` keyword
-changes the value used for missing/bad entries (default is ''). The encoding
-of the resulting CSV file is determined by the codec that is set when opening
-the DBF file, see `Loading`_.
+changes the value used for missing/bad entries (default is ''). The keyword
+``header`` is a boolean that controls writing of the column names as the first
+row of the CSV file. The encoding of the resulting CSV file is determined by
+the codec that is set when opening the DBF file, see `Loading`_. 
 
 .. code::
 
@@ -210,8 +213,50 @@ very `powerful CSV export capabilities`_ for DataFrames.
 .. _powerful CSV export capabilities: http://pandas.pydata.org/pandas-docs/
         stable/io.html#writing-to-csv-format
 
+To SQL (CSV based)
+++++++++++++++++++
+
+Most SQL databases can import CSV files directly into an available table. The
+pure-Python ``to_textsql`` method creates a SQL file containing the
+appropriate table creation SQL and the SQL-variant command needed for loading
+the file. In addition, the header-less CSV file is also created. (It is up to
+you to load run the SQL file. See below.) This function takes two mandatory
+arguments.  First, the name of of the SQL text file that you'd like to create,
+and second, the name of the CSV file you'd like to create. In addition, there
+are a number of optional keyword arguments as well. ``sqltype`` controls the
+output dialect. The default is 'sqlite', but 'postgres' is also accepted.
+``table`` can be used to set the name of the SQL table that will be created.
+By default, this will be the name of the DBF file without the file extension.
+You should escape quote characters (") in the CSV file. This is controlled
+with the ``escapeqoute`` keyword, which defaults to ``'"'``. (This changes '"'
+in text strings to '""', which the SQL server should ignore.) The
+``chunksize``, ``na``, and ``header`` keywords are used to control the CSV
+file. See above.
+
+Here's an example for SQLite:
+
+.. code::
+
+    In : dbf = Dbf5('fake_file_name.dbf')
+
+    In : dbf.to_textsql('junk.sql', 'junk.csv')
+
+    # Exit Python
+    $ sqlite3 junk.db < junk.sql
+
+Here's an example for Postgresql:
+
+.. code::
+
+    In : dbf = Dbf5('fake_file_name.dbf')
+
+    In : dbf.to_textsql('junk.sql', 'junk.csv', sqltype='postgres')
+
+    # Exit Python
+    $ psql -U username -f junk.sql db_name
+
 To DataFrame 
-++++++++++++ 
+++++++++++++
 
 The ``to_dataframe`` method returns the DBF records as a Pandas DataFrame.
 Obviously, this method requires that Pandas is installed. If the size of the
@@ -249,15 +294,17 @@ this could be changed, but it is currently non-trivial to set the dtypes for
 DataFrame columns on construction. Please file a PR through GitHub if this is
 a big problem.
 
-To an SQL Table
-+++++++++++++++
+To an SQL Table using Pandas
+++++++++++++++++++++++++++++
 
 The ``to_pandassql`` method will transfer the DBF entries to an SQL database
-table of your choice. This method uses a combination of Pandas DataFrames and
-SQLalchemy, so both of these packages must be installed. A valid `SQLalchemy
-engine string`_ argument is required to connect with the database. Database
-support will be limited to those supported by SQLalchemy. (This has been
-tested with SQLite and Postgresql.)
+table of your choice using a combination of Pandas DataFrames and SQLalchemy.
+A valid `SQLalchemy engine string`_ argument is required to connect with the
+database. Database support will be limited to those supported by SQLalchemy.
+(This has been tested with SQLite and Postgresql.) Note, if you are
+transferring a large amount of data, this method will be very slow. If you
+have direct access to the SQL server, you might want to use the text-based SQL
+export instead.
 
 .. code::
 
@@ -314,12 +361,12 @@ This method uses the same optional arguments, and corresponding defaults, as
 See the `chunksize issue`_ for DataFrame export for information on a potential
 problem you may encounter with chunksize.
 
-Export all DBF Files to Same HDF File/Database
-++++++++++++++++++++++++++++++++++++++++++++++
+Export all DBF Files to Same HDF File
++++++++++++++++++++++++++++++++++++++
 
-Because both HDF and SQL export use the original file name as the stored table
-name, it is trivial to process a group of files into a single database or HDF
-file. Below is an example for HDF export.
+Because HDF export use the original file name as the stored table name, it is
+trivial to process a group of files into a single HDF file. Below is an
+example for HDF export.
 
 .. code:: 
 
@@ -334,7 +381,7 @@ file. Below is an example for HDF export.
     ....         dbf = Dbf5(f)
     ....         dbf.to_pandashdf('all_data.h5')
 
-
+The process is very similar for ``to_textsql`` or ``to_pandassql``. 
    
 
 
