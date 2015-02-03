@@ -18,6 +18,11 @@ else:
     except:
         print("SQLalchemy is not installed. No support for SQL output.")
 
+sqltypes = {
+        'sqlite': {'str':'TEXT', 'float':'REAL', 'int': 'INTEGER', 
+            'date':'TEXT', 'bool':'INTEGER', 
+            'end': '.mode csv {table}\n.import {csvname} {table}'}
+        }
 
 class DbfBase(object):
     '''
@@ -100,7 +105,7 @@ class DbfBase(object):
         out = "This total process would require more than {:.4g} MB of RAM."
         print(out.format(memory))      
 
-    def to_csv(self, csvname, chunksize=None, na=''):
+    def to_csv(self, csvname, chunksize=None, na='', header=True):
         '''Write DBF file contents to a CSV file.
 
         Parameters
@@ -126,8 +131,9 @@ class DbfBase(object):
         '''
         self._na_set(na)
         csv = codecs.open(csvname, 'a', encoding=self._enc)
-        column_line = ','.join(self.columns)
-        csv.write(column_line + '\n')
+        if header:
+            column_line = ','.join(self.columns)
+            csv.write(column_line + '\n')
 
         # Build up a formatting string for output. 
         outs = []
@@ -151,6 +157,33 @@ class DbfBase(object):
                 csv.flush()
                 count = 0
         csv.close()
+
+    def to_textsql(self, sqlname, csvname, sqltype='sqlite', table=None,
+            chunksize=None, na='', header=False):
+        if not table:
+            table = self.dbf[:-4] # strip trailing ".dbf"
+        self.to_csv(csvname, chunksize=chunksize, na=na, header=header)
+
+        sql = codecs.open(sqlname, 'w', encoding=self._enc)
+        sql.write("CREATE TABLE {} (\n".format(table))
+
+        sqldict = sqltypes[sqltype]
+        out_str = "{} {}"
+        outs = []
+        for field in self.fields:
+            name, typ, size = field
+            if name == "DeletionFlag": continue
+            if name in self._dtypes:
+                dtype = self._dtypes[name]
+                outtype = sqldict[dtype]
+            else: 
+                # Check nan type, not correct
+                outtype = 'Missing'
+            outs.append(out_str.format(name, outtype))
+        sql.write(',\n'.join(outs))
+        sql.write(');\n')
+        sql.write(sqldict['end'].format(table=table, csvname=csvname))
+        sql.close()
 
     def to_dataframe(self, chunksize=None, na='nan'):
         '''Return the DBF contents as a DataFrame.
