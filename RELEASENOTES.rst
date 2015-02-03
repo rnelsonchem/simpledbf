@@ -1,3 +1,20 @@
+simpledbf 0.2.3 Release Notes
+#############################
+
+Highlights
+----------
+
+* Added a pure-Python SQL option which writes a SQL table creation file and a
+  header-less CSV file. This is much more efficient for uploading large data
+  files to SQL.
+
+API Changes
+-----------
+
+* The default NaN value for float/int columns was changed to always be
+  ``float('nan')``. This is necessary for DBF->SQL->DF conversion, even though
+  the CSV files now have 'nan' for all empty values.
+
 simpledbf 0.2.2 Release Notes
 #############################
 
