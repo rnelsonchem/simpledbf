@@ -23,11 +23,13 @@ sqltypes = {
             'date':'TEXT', 'bool':'INTEGER', 
             'end': '.mode csv {table}\n.import {csvname} {table}',
             'start': 'CREATE TABLE {} (\n',
+            'index': '"index" INTEGER PRIMARY KEY ASC',
             },
         'postgres': {'str': 'text', 'float': 'double precision', 
             'int':'bigint', 'date':'date', 'bool':'boolean',
             'end': '''\copy "{table}" from '{csvname}' delimiter ',' csv''',
             'start': 'CREATE TABLE "{}" (\n',
+            'index': '"index" INTEGER PRIMARY KEY',
             },
         }
 
@@ -151,7 +153,11 @@ class DbfBase(object):
         outs = []
         for field in self.fields:
             if field[0] == "DeletionFlag":
-                continue
+                # Add an index column placeholder
+                if self._idx:
+                    outs.append('{}')
+                else:
+                    continue
             # Wrap strings in quotes
             elif field[1] in 'CDL':
                 outs.append('"{}"')
@@ -161,8 +167,12 @@ class DbfBase(object):
         out_line = u','.join(outs) + '\n'
         
         count = 0
-        for result in self._get_recs():
-            out_string = out_line.format(*result)
+        for n, result in enumerate(self._get_recs()):
+            if self._idx:
+                out_string = out_line.format(n, *result)
+            else:
+                out_string = out_line.format(*result)
+            
             csv.write(out_string)
             count += 1
             if count == chunksize:
@@ -213,6 +223,9 @@ class DbfBase(object):
             character in a text string is treated as a single quote. I.e. '""'
             is converted to '"'.
         '''
+        # Create an index column
+        self._idx = True
+        # Set the quote escape
         self._esc = escapequote
         # Get a dictionary of type conversions for a particular sql dialect
         sqldict = sqltypes[sqltype]
@@ -233,7 +246,9 @@ class DbfBase(object):
         for field in self.fields:
             name, typ, size = field
             # Skip the first field
-            if name == "DeletionFlag": continue
+            if name == "DeletionFlag":
+                continue
+
             # Convert Python type to SQL type
             if name in self._dtypes:
                 dtype = self._dtypes[name]
@@ -250,6 +265,10 @@ class DbfBase(object):
                 elif typ == 'D':
                     outtype = sqldict['date']
             outs.append(out_str.format(name, outtype))
+
+        # Insert an index line
+        if self._idx:
+            outs.insert(0, sqldict['index'])
 
         # Write the column information
         sql.write(',\n'.join(outs))
