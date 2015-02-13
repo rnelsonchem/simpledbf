@@ -4,6 +4,24 @@ simpledbf 0.2.3 Release Notes
 Highlights
 ----------
 
+* Added `data_columns`, `complib`, and `complevel` keyword arguments to the
+  `to_pandashdf` method. The function of these mirrors the equivalent
+  arguments used in the Pandas HDFStore object and HDFStore.append method. See
+  the Pandas docs for more information.
+
+Bug Fixes
+---------
+
+* Added an index column to the CSV-based SQL output. This is necessary for
+  selecting data from the SQL file, and also reading the SQL table back into a
+  DataFrame at a later time.
+
+simpledbf 0.2.3 Release Notes
+#############################
+
+Highlights
+----------
+
 * Added a pure-Python SQL option which writes a SQL table creation file and a
   header-less CSV file. This is much more efficient for uploading large data
   files to SQL.

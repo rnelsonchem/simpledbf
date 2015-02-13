@@ -391,8 +391,11 @@ class DbfBase(object):
         else:
             for df in self.to_dataframe(chunksize=chunksize):
                 df.to_sql(table, engine, dtype=dtype, if_exists='append')
+        del(df)
 
-    def to_pandashdf(self, h5name, table=None, chunksize=None, na='nan'):
+        
+    def to_pandashdf(self, h5name, table=None, chunksize=None, na='nan', 
+            complevel=9, complib='blosc', data_columns=None):
         '''Write DBF contents to an HDF5 file using Pandas.
 
         Parameters
@@ -422,6 +425,20 @@ class DbfBase(object):
             the Python object `None`. Default for HDF table is NaN ('nan');
             however, float/int columns are always float('nan').
 
+        complib/complevel : int/string
+            These keyword arguments set the compression library and level for
+            the HDF file. These arguments are identical to the one defined for
+            Pandas HDFStore, so see the Pandas documentation on `HDFStore` for
+            more information.
+
+        data_columns : list of column names or True
+            This is a list of column names that will be created as data
+            columns in the HDF file. This allows for advanced searching on
+            these columns. If `True` is passed all columns will be data
+            columns. There is some performace/file size degredation using this
+            method, so for large numbers of columns, it is not recomended. See
+            the Pandas IO documentation for more information.
+
         Notes
         -----
         This method requires Pandas >= 0.15.2 and PyTables >= 3.1.1.
@@ -433,11 +450,12 @@ class DbfBase(object):
         self._na_set(na)
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
-        h5 = pd.HDFStore(h5name, 'a', complevel=9, complib='blosc')
+
+        h5 = pd.HDFStore(h5name, 'a', complevel=complevel, complib=complib)
 
         if not chunksize:
             df = self.to_dataframe()
-            h5.append(table, df)
+            h5.append(table, df, data_columns=data_columns)
         else:
             # Find the maximum string column length This is necessary because
             # the appendable table can not change width if a new DF is added
@@ -451,9 +469,11 @@ class DbfBase(object):
                 max_string_len = {'values':mx}
 
             for df in self.to_dataframe(chunksize=chunksize):
-                h5.append(table, df, min_itemsize=max_string_len)
+                h5.append(table, df, min_itemsize=max_string_len,
+                        data_columns=data_columns)
                 h5.flush(fsync=True)
-
+        
+        del(df)
         h5.close()
 
 class Dbf5(DbfBase):

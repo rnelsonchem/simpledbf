@@ -79,11 +79,10 @@ Requirements
 ------------
 
 This module was tested with the following package versions. Python is the only
-requirement if you only want to export to CSV. In that case, comment out the
-other imports in the source code (only one file) to avoid using the optional
-packages.
+requirement if you only want to export to a CSV file or to an SQL table via a
+CSV output (see ``to_textsql`` below).
 
-* Python >=3.4, >=2.7.9 (no HDF export)
+* Python >=3.4, >=2.7.9 (no HDF export with Py2)
 
 * Pandas >= 0.15.2 (Required for DataFrame)
 
@@ -102,8 +101,8 @@ Or from GitHub::
 
     $ pip install git+https://github.com/rnelsonchem/simpledbf.git
 
-However, this package is currently a single file, so you can just download it
-into any folder of your choosing.
+However, this package is currently a single file, so you can download the
+``simpledbf.py`` file from Github and put it in any folder of your choosing.
 
 Example Usage
 #############
@@ -341,7 +340,10 @@ string for the HDF file you'd like to use. This file will be created if it
 does not exist.  Again, the default is to append to an existing file of that
 name, so be careful here. The HDF file will be created using the highest level
 of compression (9) with the 'blosc' compression lib. This saves an enormous
-amount of disk space, with little degradation of performance.
+amount of disk space, with little degradation of performance. However, these
+parameters can be set using the ``complib`` and ``complevel`` keyword
+agruments, which are identical to the ones described in the `Pandas HDF
+compression docs`_.
 
 .. code::
 
@@ -349,8 +351,13 @@ amount of disk space, with little degradation of performance.
 
     In : dbf = dbf.to_pandashdf('fake.h5')
 
-This method uses the same optional arguments, and corresponding defaults, as
-``to_pandassql``. See above.
+This method uses all of the same optional arguments, and corresponding
+defaults, as ``to_pandassql`` (see above). However, the ``data_columns``
+keyword argument is also available, which sets the columns that will be used
+as data columns in the HDF table. Data columns can be used for advanced
+searching and selection; however, there is some degredation of preformance for
+large numbers of data columns. See the `Pandas data columns docs`_ for more
+information on the behavior of this keyword.
 
 .. code::
 
@@ -360,6 +367,12 @@ This method uses the same optional arguments, and corresponding defaults, as
 
 See the `chunksize issue`_ for DataFrame export for information on a potential
 problem you may encounter with chunksize.
+
+.. _Pandas HDF compression docs: http://pandas.pydata.org/pandas-docs/stable/
+        io.html#compression
+
+.. _Pandas data columns docs: http://pandas.pydata.org/pandas-docs/stable/
+        io.html#query-via-data-columns
 
 Export all DBF Files to Same HDF File
 +++++++++++++++++++++++++++++++++++++
