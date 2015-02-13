@@ -423,6 +423,12 @@ class DbfBase(object):
             the Python object `None`. Default for HDF table is NaN ('nan');
             however, float/int columns are always float('nan').
 
+        complib/complevel : int/string
+            These keyword arguments set the compression library and level for
+            the HDF file. These arguments are identical to the one defined for
+            Pandas HDFStore, so see the Pandas documentation on `HDFStore` for
+            more information.
+
         Notes
         -----
         This method requires Pandas >= 0.15.2 and PyTables >= 3.1.1.
