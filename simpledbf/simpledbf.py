@@ -391,7 +391,9 @@ class DbfBase(object):
         else:
             for df in self.to_dataframe(chunksize=chunksize):
                 df.to_sql(table, engine, dtype=dtype, if_exists='append')
+        del(df)
 
+        
     def to_pandashdf(self, h5name, table=None, chunksize=None, na='nan', 
             complevel=9, complib='blosc'):
         '''Write DBF contents to an HDF5 file using Pandas.
@@ -461,7 +463,8 @@ class DbfBase(object):
             for df in self.to_dataframe(chunksize=chunksize):
                 h5.append(table, df, min_itemsize=max_string_len)
                 h5.flush(fsync=True)
-
+        
+        del(df)
         h5.close()
 
 class Dbf5(DbfBase):
