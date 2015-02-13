@@ -392,7 +392,8 @@ class DbfBase(object):
             for df in self.to_dataframe(chunksize=chunksize):
                 df.to_sql(table, engine, dtype=dtype, if_exists='append')
 
-    def to_pandashdf(self, h5name, table=None, chunksize=None, na='nan'):
+    def to_pandashdf(self, h5name, table=None, chunksize=None, na='nan', 
+            complevel=9, complib='blosc'):
         '''Write DBF contents to an HDF5 file using Pandas.
 
         Parameters
@@ -433,7 +434,8 @@ class DbfBase(object):
         self._na_set(na)
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
-        h5 = pd.HDFStore(h5name, 'a', complevel=9, complib='blosc')
+
+        h5 = pd.HDFStore(h5name, 'a', complevel=complevel, complib=complib)
 
         if not chunksize:
             df = self.to_dataframe()
