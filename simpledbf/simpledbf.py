@@ -144,6 +144,8 @@ class DbfBase(object):
             Write out a header line with the column names. Default is True. 
         '''
         self._na_set(na)
+        # set index column; this is only True when used with to_textsql()
+        self._idx = False
         csv = codecs.open(csvname, 'a', encoding=self._enc)
         if header:
             column_line = ','.join(self.columns)
