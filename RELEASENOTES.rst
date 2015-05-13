@@ -1,4 +1,12 @@
-simpledbf 0.2.3 Release Notes
+simpledbf 0.2.5 Release Notes
+#############################
+
+Bug Fixes
+---------
+
+* Fixed the pure-CSV output function. Fix contributed by @sarasafavi.
+
+simpledbf 0.2.4 Release Notes
 #############################
 
 Highlights

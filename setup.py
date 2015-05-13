@@ -5,7 +5,7 @@ with open('README.rst') as file:
 
 setup(
     name = "simpledbf",
-    version = "0.2.4",
+    version = "0.2.5",
 
     description = "Convert DBF files to CSV, DataFrames, HDF5 tables, and "\
             "SQL tables. Python3 compatible.",
@@ -32,4 +32,5 @@ setup(
     packages = find_packages(),
 
 )
+
 
