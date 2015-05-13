@@ -1,4 +1,4 @@
-simpledbf 0.2.5 Release Notes
+simpledbf 0.2.6 Release Notes
 #############################
 
 Bug Fixes
