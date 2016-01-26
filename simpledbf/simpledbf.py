@@ -339,14 +339,14 @@ class DbfBase(object):
             del(results) 
             yield df
     
-    def to_pandassql(self, engine_str, table=None, chunksize=None, na='nan'):
+    def to_pandassql(self, engine, table=None, chunksize=None, na='nan'):
         '''Write DBF contents to an SQL database using Pandas.
 
         Parameters
         ----------
-        engine_str : string
-            A SQLalchemy engine initialization string. See the SQL engine
-            dialect documentation for more information.
+        engine : SQLAlchemy Engine or string
+            A SQLalchemy Engine instance or an SQL initialization string. See
+            the SQL engine dialect documentation for more information.
 
         table : string, optional
             The name of the table to create for the DBF records. If 'None'
@@ -375,7 +375,15 @@ class DbfBase(object):
         self._na_set(na)
         if not table:
             table = self.dbf[:-4] # strip trailing ".dbf"
-        engine = sql.create_engine(engine_str)
+
+        if isinstance(engine, str): 
+            engine_inst = sql.create_engine(engine)
+        elif isinstance(engine, sql.engine.Engine):
+            engine_inst = engine
+        else:
+            error = 'The engine argument is not a string or SQLAlchemy' +\
+                    'engine.'
+            raise ValueError(error)
 
         # Setup string types for proper length, otherwise Pandas assumes
         # "Text" types, which may not be as efficient
@@ -389,10 +397,10 @@ class DbfBase(object):
         # The default behavior is to append new data to existing tables.
         if not chunksize:
             df = self.to_dataframe()
-            df.to_sql(table, engine, dtype=dtype, if_exists='append')
+            df.to_sql(table, engine_inst, dtype=dtype, if_exists='append')
         else:
             for df in self.to_dataframe(chunksize=chunksize):
-                df.to_sql(table, engine, dtype=dtype, if_exists='append')
+                df.to_sql(table, engine_inst, dtype=dtype, if_exists='append')
         del(df)
 
         
